@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.6] - 2026-06-03
+### Fixed
+- `@retry` now catches only transient errors (`ConnectionError`, `TimeoutError`, `OSError`, `RequestError`) — previously caught `Exception` which pointlessly retried deterministic failures like `FileNotFoundError` and `ValueError`
+- `_with_reauth` now catches `mega.errors.RequestError` specifically (error code -15 = auth expired) instead of fragile string-matching on exception messages
+
 ## [0.1.5] - 2026-06-03
 ### Changed
 - Upgraded `tenacity` from pinned `==5.1.5` to `>=8.0.0` — mega.py works fine with tenacity 9.x despite its outdated declared constraint

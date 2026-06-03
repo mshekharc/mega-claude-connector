@@ -1,10 +1,15 @@
 import os
 from mega import Mega
+from mega.errors import RequestError
 from tenacity import retry, wait_exponential, retry_if_exception_type, stop_after_attempt
 from .config import get_credentials
 
 _mega = Mega()
 _client = None
+
+# Only retry transient network/API errors — not deterministic failures like
+# FileNotFoundError or ValueError which will never succeed on retry.
+_TRANSIENT = (ConnectionError, TimeoutError, OSError, RequestError)
 
 
 def _login():
@@ -22,18 +27,19 @@ def _get_client():
 
 
 def _with_reauth(fn, *args, **kwargs):
-    """Call fn; on auth failure, re-login once and retry."""
+    """Call fn; on Mega auth failure (RequestError -15), re-login once and retry."""
     try:
         return fn(*args, **kwargs)
-    except Exception as e:
-        if "auth" in str(e).lower() or "401" in str(e) or "session" in str(e).lower():
+    except RequestError as e:
+        # Mega API error -15 = EACCESS (auth expired / invalid session)
+        if getattr(e, "code", None) == -15 or "-15" in str(e):
             _login()
             return fn(*args, **kwargs)
         raise
 
 
 @retry(wait=wait_exponential(multiplier=1, min=2, max=10),
-       retry=retry_if_exception_type(Exception),
+       retry=retry_if_exception_type(_TRANSIENT),
        stop=stop_after_attempt(3))
 def get_storage_info() -> dict:
     m = _get_client()
@@ -86,7 +92,7 @@ def search_files(query: str) -> list[dict]:
 
 
 @retry(wait=wait_exponential(multiplier=1, min=2, max=10),
-       retry=retry_if_exception_type(Exception),
+       retry=retry_if_exception_type(_TRANSIENT),
        stop=stop_after_attempt(3))
 def upload_file(local_path: str, remote_folder: str | None = None) -> dict:
     m = _get_client()
