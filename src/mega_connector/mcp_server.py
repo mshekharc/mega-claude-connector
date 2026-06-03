@@ -3,108 +3,45 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp import types
 from . import mega_client as mc
+from .tools import as_mcp_tools
 
 app = Server("mega-connector")
+
+_DISPATCH = {
+    "mega_storage_info": lambda a: mc.get_storage_info(),
+    "mega_list_files":   lambda a: mc.list_files(a.get("folder_path")),
+    "mega_search":       lambda a: mc.search_files(a["query"]),
+    "mega_upload":       lambda a: mc.upload_file(a["local_path"], a.get("remote_folder")),
+    "mega_download":     lambda a: mc.download_file(a["file_name"], a.get("local_dest", ".")),
+    "mega_create_folder":lambda a: mc.create_folder(a["folder_name"], a.get("parent_folder")),
+    "mega_delete":       lambda a: mc.delete_node(a["file_name"]),
+}
+
+_REQUIRED = {
+    "mega_search":        ["query"],
+    "mega_upload":        ["local_path"],
+    "mega_download":      ["file_name"],
+    "mega_create_folder": ["folder_name"],
+    "mega_delete":        ["file_name"],
+}
 
 
 @app.list_tools()
 async def list_tools() -> list[types.Tool]:
-    return [
-        types.Tool(
-            name="mega_storage_info",
-            description="Get Mega.nz storage usage and quota",
-            inputSchema={"type": "object", "properties": {}},
-        ),
-        types.Tool(
-            name="mega_list_files",
-            description="List files and folders. Optionally filter by folder path.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "folder_path": {"type": "string", "description": "Remote folder name to list (omit for root)"},
-                },
-            },
-        ),
-        types.Tool(
-            name="mega_search",
-            description="Search for files or folders by name",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string", "description": "Search term"},
-                },
-                "required": ["query"],
-            },
-        ),
-        types.Tool(
-            name="mega_upload",
-            description="Upload a local file to Mega.nz",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "local_path": {"type": "string", "description": "Absolute path to the local file"},
-                    "remote_folder": {"type": "string", "description": "Destination folder name on Mega (omit for root)"},
-                },
-                "required": ["local_path"],
-            },
-        ),
-        types.Tool(
-            name="mega_download",
-            description="Download a file from Mega.nz to a local directory",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "file_name": {"type": "string", "description": "Name of the file on Mega"},
-                    "local_dest": {"type": "string", "description": "Local directory to save to (default: current dir)"},
-                },
-                "required": ["file_name"],
-            },
-        ),
-        types.Tool(
-            name="mega_create_folder",
-            description="Create a new folder on Mega.nz",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "folder_name": {"type": "string", "description": "Name of the new folder"},
-                    "parent_folder": {"type": "string", "description": "Parent folder name (omit for root)"},
-                },
-                "required": ["folder_name"],
-            },
-        ),
-        types.Tool(
-            name="mega_delete",
-            description="Delete a file or folder from Mega.nz",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "file_name": {"type": "string", "description": "Name of the file or folder to delete"},
-                },
-                "required": ["file_name"],
-            },
-        ),
-    ]
+    return as_mcp_tools()
 
 
 @app.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
     try:
-        if name == "mega_storage_info":
-            result = mc.get_storage_info()
-        elif name == "mega_list_files":
-            result = mc.list_files(arguments.get("folder_path"))
-        elif name == "mega_search":
-            result = mc.search_files(arguments["query"])
-        elif name == "mega_upload":
-            result = mc.upload_file(arguments["local_path"], arguments.get("remote_folder"))
-        elif name == "mega_download":
-            result = mc.download_file(arguments["file_name"], arguments.get("local_dest", "."))
-        elif name == "mega_create_folder":
-            result = mc.create_folder(arguments["folder_name"], arguments.get("parent_folder"))
-        elif name == "mega_delete":
-            result = mc.delete_node(arguments["file_name"])
-        else:
-            result = {"error": f"Unknown tool: {name}"}
+        if name not in _DISPATCH:
+            raise ValueError(f"Unknown tool: {name}")
+
+        missing = [k for k in _REQUIRED.get(name, []) if k not in arguments]
+        if missing:
+            raise ValueError(f"Missing required arguments for {name}: {missing}")
+
+        result = _DISPATCH[name](arguments)
     except Exception as e:
         result = {"error": str(e)}
 

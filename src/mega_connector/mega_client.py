@@ -1,23 +1,44 @@
 import os
 from mega import Mega
+from tenacity import retry, wait_exponential, retry_if_exception_type, stop_after_attempt
 from .config import get_credentials
 
 _mega = Mega()
 _client = None
 
 
-def _get_client():
+def _login():
     global _client
-    if _client is None:
-        creds = get_credentials()
-        _client = _mega.login(creds["mega_email"], creds["mega_password"])
+    creds = get_credentials()
+    _client = _mega.login(creds["mega_email"], creds["mega_password"])
     return _client
 
 
+def _get_client():
+    global _client
+    if _client is None:
+        _login()
+    return _client
+
+
+def _with_reauth(fn, *args, **kwargs):
+    """Call fn; on auth failure, re-login once and retry."""
+    try:
+        return fn(*args, **kwargs)
+    except Exception as e:
+        if "auth" in str(e).lower() or "401" in str(e) or "session" in str(e).lower():
+            _login()
+            return fn(*args, **kwargs)
+        raise
+
+
+@retry(wait=wait_exponential(multiplier=1, min=2, max=10),
+       retry=retry_if_exception_type(Exception),
+       stop=stop_after_attempt(3))
 def get_storage_info() -> dict:
     m = _get_client()
-    quota = m.get_quota()
-    storage = m.get_storage_space()
+    quota = _with_reauth(m.get_quota)
+    storage = _with_reauth(m.get_storage_space)
     return {
         "used_bytes": storage.get("used", 0),
         "total_bytes": storage.get("total", 0),
@@ -28,12 +49,12 @@ def get_storage_info() -> dict:
 def list_files(folder_path: str | None = None) -> list[dict]:
     m = _get_client()
     if folder_path:
-        folder = m.find(folder_path)
+        folder = _with_reauth(m.find, folder_path)
         if not folder:
             raise ValueError(f"Folder not found: {folder_path}")
-        files = m.get_files_in_node(folder[0])
+        files = _with_reauth(m.get_files_in_node, folder[0])
     else:
-        files = m.get_files()
+        files = _with_reauth(m.get_files)
 
     result = []
     for file_id, file_data in files.items():
@@ -49,7 +70,7 @@ def list_files(folder_path: str | None = None) -> list[dict]:
 
 def search_files(query: str) -> list[dict]:
     m = _get_client()
-    results = m.find(query)
+    results = _with_reauth(m.find, query)
     if not results:
         return []
     output = []
@@ -64,27 +85,30 @@ def search_files(query: str) -> list[dict]:
     return output
 
 
+@retry(wait=wait_exponential(multiplier=1, min=2, max=10),
+       retry=retry_if_exception_type(Exception),
+       stop=stop_after_attempt(3))
 def upload_file(local_path: str, remote_folder: str | None = None) -> dict:
     m = _get_client()
     if not os.path.exists(local_path):
         raise FileNotFoundError(f"Local file not found: {local_path}")
     dest = None
     if remote_folder:
-        folder = m.find(remote_folder)
+        folder = _with_reauth(m.find, remote_folder)
         if not folder:
             raise ValueError(f"Remote folder not found: {remote_folder}")
         dest = folder[0]
-    file = m.upload(local_path, dest)
+    file = _with_reauth(m.upload, local_path, dest)
     link = m.get_upload_link(file)
     return {"name": os.path.basename(local_path), "link": link}
 
 
 def download_file(file_name: str, local_dest: str = ".") -> str:
     m = _get_client()
-    results = m.find(file_name)
+    results = _with_reauth(m.find, file_name)
     if not results:
         raise FileNotFoundError(f"File not found on Mega: {file_name}")
-    m.download(results[0], local_dest)
+    _with_reauth(m.download, results[0], local_dest)
     return os.path.join(local_dest, file_name)
 
 
@@ -92,18 +116,19 @@ def create_folder(folder_name: str, parent_folder: str | None = None) -> dict:
     m = _get_client()
     parent = None
     if parent_folder:
-        found = m.find(parent_folder)
+        found = _with_reauth(m.find, parent_folder)
         if not found:
             raise ValueError(f"Parent folder not found: {parent_folder}")
         parent = found[0]
-    folder = m.create_folder(folder_name, parent)
-    return {"name": folder_name, "id": folder.get(folder_name)}
+    folder = _with_reauth(m.create_folder, folder_name, parent)
+    folder_id = next(iter(folder.values()), None)
+    return {"name": folder_name, "id": folder_id}
 
 
 def delete_node(file_name: str) -> bool:
     m = _get_client()
-    results = m.find(file_name)
+    results = _with_reauth(m.find, file_name)
     if not results:
         raise FileNotFoundError(f"Not found: {file_name}")
-    m.delete(results[0])
+    _with_reauth(m.delete, results[0])
     return True

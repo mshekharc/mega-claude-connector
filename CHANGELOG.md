@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.1.4] - 2026-06-03
+### Fixed
+- **Critical:** `list_files()` had corrupted/garbled syntax — was broken on import
+- `create_folder()` always returned `id: None` — now uses `next(iter(folder.values()))`
+- Stale Mega session no longer silently fails — re-auth triggered automatically on auth errors
+### Added
+- `tools.py` shared module — tool definitions no longer duplicated between CLI and MCP server
+- tenacity `@retry` with exponential backoff on `get_storage_info()` and `upload_file()`
+- Hard `click.confirm()` delete confirmation in CLI — no longer relies on Claude's system prompt alone
+- Streaming output in CLI via `client.messages.stream()` — responses appear token by token
+- Input validation in MCP `call_tool` — missing required args return a clean error instead of `KeyError`
+- `--model` now also reads from `MEGA_CLAUDE_MODEL` env var
+### Changed
+- MCP `call_tool` replaced `if/elif` chain with dispatch dict — consistent with CLI pattern
+
 ## [0.1.3] - 2026-06-03
 ### Fixed
 - Runtime shim for tenacity 5.x compatibility on Python 3.11+ (`asyncio.coroutine` removed upstream)
