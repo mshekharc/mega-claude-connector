@@ -1,0 +1,25 @@
+# Changelog
+
+## [0.1.3] - 2026-06-03
+### Fixed
+- Runtime shim for tenacity 5.x compatibility on Python 3.11+ (`asyncio.coroutine` removed upstream)
+- `requirements.txt` now points to `pyproject.toml` via `-e .` instead of duplicating dependencies
+### Added
+- GitHub Actions CI workflow (test on Python 3.11 and 3.12)
+- GitHub Actions publish workflow using Trusted Publishing (no API tokens needed)
+
+## [0.1.2] - 2026-06-03
+### Security
+- Password and API key prompts now use `getpass` — input is masked at the terminal
+
+## [0.1.1] - 2026-06-03
+### Fixed
+- README now included in PyPI package metadata (project description was blank)
+- Corrected GitHub homepage URL in `pyproject.toml`
+
+## [0.1.0] - 2026-06-03
+### Added
+- Initial release
+- MCP server with 7 tools: `mega_storage_info`, `mega_list_files`, `mega_search`, `mega_upload`, `mega_download`, `mega_create_folder`, `mega_delete`
+- Interactive Claude-powered CLI (`mega-claude`)
+- Credential-safe config system: env vars → `~/.config/mega-claude-connector/config` → interactive prompt
