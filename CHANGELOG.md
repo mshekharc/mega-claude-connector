@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.5] - 2026-06-03
+### Changed
+- Upgraded `tenacity` from pinned `==5.1.5` to `>=8.0.0` — mega.py works fine with tenacity 9.x despite its outdated declared constraint
+- Removed `__init__.py` asyncio shim — no longer needed with tenacity 8+
+### Fixed
+- `config.py` env var path now prompts for Anthropic key if Mega env vars are set but `ANTHROPIC_API_KEY` is not
+- `config.py` plaintext storage warning added to docstring and comment
+### Added
+- `py.typed` marker — package now declares PEP 561 typing support
+- Comment in `mcp_server.py` explaining intentional no-confirm on delete (MCP is non-interactive)
+
 ## [0.1.4] - 2026-06-03
 ### Fixed
 - **Critical:** `list_files()` had corrupted/garbled syntax — was broken on import

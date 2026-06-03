@@ -14,6 +14,8 @@ _DISPATCH = {
     "mega_upload":       lambda a: mc.upload_file(a["local_path"], a.get("remote_folder")),
     "mega_download":     lambda a: mc.download_file(a["file_name"], a.get("local_dest", ".")),
     "mega_create_folder":lambda a: mc.create_folder(a["folder_name"], a.get("parent_folder")),
+    # No interactive confirm here — MCP runs non-interactively (no terminal).
+    # Delete safety is enforced by Claude's tool-call confirmation in the client UI.
     "mega_delete":       lambda a: mc.delete_node(a["file_name"]),
 }
 
