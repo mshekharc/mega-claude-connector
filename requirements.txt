@@ -1,0 +1,5 @@
+mega.py>=1.0.8
+tenacity==5.1.5
+anthropic>=0.105.0
+mcp>=1.27.0
+click>=8.1.0
