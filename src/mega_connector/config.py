@@ -1,5 +1,6 @@
 import os
 import configparser
+import getpass
 from pathlib import Path
 
 _CONFIG_DIR = Path.home() / ".config" / "mega-claude-connector"
@@ -27,10 +28,10 @@ def _prompt_and_save(require_anthropic: bool = False) -> dict:
     print("\nFirst-time setup — credentials are stored only in ~/.config/mega-claude-connector/config\n")
     values = {
         "mega_email": input("Mega.nz email: ").strip(),
-        "mega_password": input("Mega.nz password: ").strip(),
+        "mega_password": getpass.getpass("Mega.nz password: ").strip(),
     }
     if require_anthropic:
-        values["anthropic_api_key"] = input("Anthropic API key: ").strip()
+        values["anthropic_api_key"] = getpass.getpass("Anthropic API key: ").strip()
     _save_config(values)
     print(f"\nCredentials saved to {_CONFIG_FILE}\n")
     return values
@@ -51,7 +52,7 @@ def get_credentials(require_anthropic: bool = False) -> dict:
     file_creds = _load_file_config()
     if file_creds.get("mega_email") and file_creds.get("mega_password"):
         if require_anthropic and not file_creds.get("anthropic_api_key"):
-            key = input("Anthropic API key (not saved yet): ").strip()
+            key = getpass.getpass("Anthropic API key (not saved yet): ").strip()
             file_creds["anthropic_api_key"] = key
             _save_config(file_creds)
         return file_creds
