@@ -1,4 +1,6 @@
 import os
+import json
+import time
 import configparser
 import getpass
 from pathlib import Path
@@ -38,6 +40,43 @@ def _prompt_and_save(require_anthropic: bool = False) -> dict:
     _save_config(values)
     print(f"\nCredentials saved to {_CONFIG_FILE}\n")
     return values
+
+
+def _claude_credentials_path() -> Path | None:
+    """Find .credentials.json across Linux, Windows, and WSL environments."""
+    candidates = [Path.home() / ".claude" / ".credentials.json"]
+
+    # In WSL, Claude Code stores credentials in the Windows home, not Linux home
+    try:
+        wsl = Path("/proc/version").read_text().lower()
+        if "microsoft" in wsl or "wsl" in wsl:
+            win_user = os.environ.get("USER", "")
+            win_path = Path(f"/mnt/c/Users/{win_user}/.claude/.credentials.json")
+            candidates.append(win_path)
+    except Exception:
+        pass
+
+    return next((p for p in candidates if p.exists()), None)
+
+
+def get_claude_oauth_token() -> str | None:
+    """Return the claude.ai OAuth access token if Claude Code is installed and logged in.
+
+    Using this token routes inference through the user's claude.ai Pro subscription
+    instead of billing API credits.
+    """
+    creds_path = _claude_credentials_path()
+    if not creds_path:
+        return None
+    try:
+        data = json.loads(creds_path.read_text())
+        oauth = data.get("claudeAiOauth", {})
+        expires_at = oauth.get("expiresAt", 0)
+        if expires_at and expires_at > time.time() * 1000:
+            return oauth.get("accessToken")
+    except Exception:
+        pass
+    return None
 
 
 def get_credentials(require_anthropic: bool = False) -> dict:

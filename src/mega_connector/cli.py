@@ -2,7 +2,7 @@ import json
 import click
 import anthropic
 from . import mega_client as mc
-from .config import get_credentials
+from .config import get_credentials, get_claude_oauth_token
 from .tools import as_anthropic_tools
 
 SYSTEM = (
@@ -39,8 +39,15 @@ def _run_tool(name: str, args: dict):
               envvar="MEGA_CLAUDE_MODEL", help="Anthropic model to use")
 def chat(model: str):
     """Interactive Claude-powered Mega.nz file manager."""
-    creds = get_credentials(require_anthropic=True)
-    client = anthropic.Anthropic(api_key=creds["anthropic_api_key"])
+    oauth_token = get_claude_oauth_token()
+    creds = get_credentials(require_anthropic=oauth_token is None)
+
+    if oauth_token:
+        client = anthropic.Anthropic(auth_token=oauth_token)
+        click.echo("Auth: claude.ai Pro subscription (no API credits used)")
+    else:
+        client = anthropic.Anthropic(api_key=creds["anthropic_api_key"])
+        click.echo("Auth: Anthropic API key")
     tools = as_anthropic_tools()
     messages = []
 

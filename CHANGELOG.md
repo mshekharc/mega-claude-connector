@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.9] - 2026-06-04
+### Changed
+- CLI now uses claude.ai OAuth token (Pro subscription) automatically if Claude Code is installed, eliminating API credit usage
+- Falls back to `ANTHROPIC_API_KEY` / stored key only when no OAuth token is found
+- Startup message now shows which auth method is active
+### Added
+- `get_claude_oauth_token()` in `config.py` — reads `~/.claude/.credentials.json`, handles Linux, Windows, and WSL paths
+- `_claude_credentials_path()` — resolves credentials file across environments (WSL checks `/mnt/c/Users/$USER/.claude/`)
+
 ## [0.1.8] - 2026-06-04
 ### Fixed
 - Vendored `mega.py` client into `mega_connector/_mega/` — eliminates the `mega.py` PyPI dependency whose pinned `tenacity<6.0.0` constraint made the package uninstallable on Python 3.11+ (tenacity 5.x uses the removed `asyncio.coroutine`)
