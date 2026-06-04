@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mega-claude-connector"
-version = "0.1.6"
+version = "0.1.7"
 description = "Mega.nz MCP server and Claude-powered CLI for cloud storage management"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -18,7 +18,7 @@ classifiers = [
 ]
 dependencies = [
     "mega.py>=1.0.8",
-    "tenacity>=8.0.0",
+    "tenacity>=5.1.5",
     "anthropic>=0.105.0",
     "mcp>=1.27.0",
     "click>=8.1.0",
