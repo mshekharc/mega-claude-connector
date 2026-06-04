@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.8] - 2026-06-04
+### Fixed
+- Vendored `mega.py` client into `mega_connector/_mega/` — eliminates the `mega.py` PyPI dependency whose pinned `tenacity<6.0.0` constraint made the package uninstallable on Python 3.11+ (tenacity 5.x uses the removed `asyncio.coroutine`)
+- Restored `tenacity>=8.0.0` — now unconstrained by the vendored mega client
+### Changed
+- `requests>=2.28.0` and `pycryptodome>=3.15.0` are now direct dependencies (previously transitive via `mega.py`)
+
+## [0.1.7] - 2026-06-04
+### Fixed
+- Changed `tenacity>=8.0.0` to `>=5.1.5` to unblock pip install (partial fix — later superseded by v0.1.8 vendoring)
+### Changed
+- Publish workflow switched from OIDC Trusted Publishing to API token (`PYPI_API_TOKEN` secret) — Trusted Publishing requires a GitHub repo verification step on PyPI that was failing
+
 ## [0.1.6] - 2026-06-03
 ### Fixed
 - `@retry` now catches only transient errors (`ConnectionError`, `TimeoutError`, `OSError`, `RequestError`) — previously caught `Exception` which pointlessly retried deterministic failures like `FileNotFoundError` and `ValueError`
@@ -37,7 +50,7 @@
 - `requirements.txt` now points to `pyproject.toml` via `-e .` instead of duplicating dependencies
 ### Added
 - GitHub Actions CI workflow (test on Python 3.11 and 3.12)
-- GitHub Actions publish workflow using Trusted Publishing (no API tokens needed)
+- GitHub Actions publish workflow (later changed to API token auth in v0.1.7)
 
 ## [0.1.2] - 2026-06-03
 ### Security
