@@ -1,6 +1,6 @@
 import os
-from mega import Mega
-from mega.errors import RequestError
+from ._mega import Mega
+from ._mega.errors import RequestError
 from tenacity import retry, wait_exponential, retry_if_exception_type, stop_after_attempt
 from .config import get_credentials
 
